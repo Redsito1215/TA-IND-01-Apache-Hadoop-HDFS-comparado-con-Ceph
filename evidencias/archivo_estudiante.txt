@@ -1,0 +1,8 @@
+TA-IND-01 - Experimento de tolerancia a fallos en Apache Hadoop HDFS
+Estudiante: Steven Fernando Pozo Castillo
+Curso: 7.º semestre, paralelo B
+Usuario de GitHub: Redsito1215
+Sistema principal: Apache Hadoop HDFS
+Sistema de comparación: Ceph
+Prueba: almacenamiento con factor de replicación 3 y pérdida controlada de respuesta de un DataNode.
+
