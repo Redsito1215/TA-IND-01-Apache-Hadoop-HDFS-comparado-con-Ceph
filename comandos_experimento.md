@@ -46,7 +46,7 @@ docker exec hdfs-taind-namenode hdfs fsck /ta-ind-01/archivo_estudiante.txt -fil
 ```powershell
 docker pause hdfs-taind-datanode1
 docker ps --filter "name=hdfs-taind" --format "table {{.Names}}\t{{.Status}}"
-docker exec hdfs-taind-namenode hdfs dfs -cat /ta-ind-01/archivo_estudiante.txt
+docker exec -e HADOOP_OPTS=-Ddfs.client.socket-timeout=3000 hdfs-taind-namenode hdfs dfs -cat /ta-ind-01/archivo_estudiante.txt
 ```
 
 ## 7. Recuperar el DataNode

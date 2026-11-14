@@ -1,0 +1,87 @@
+RESULTADOS DEL EXPERIMENTO HDFS
+
+Fecha: 14 de noviembre de 2026
+
+1. OBJETIVO
+
+Comprobar que Apache Hadoop HDFS puede mantener disponible un archivo cuando uno de sus DataNodes deja temporalmente de responder.
+
+2. CONFIGURACIÓN UTILIZADA
+
+- Un NameNode.
+- Tres DataNodes.
+- Factor de replicación: 3.
+- Archivo: /ta-ind-01/archivo_estudiante.txt
+- Tamaño del archivo: 241 bytes.
+- Cantidad de bloques: 1.
+
+3. ESTADO INICIAL
+
+Los cuatro contenedores se iniciaron correctamente:
+
+hdfs-taind-namenode    Up (healthy)
+hdfs-taind-datanode1   Up (healthy)
+hdfs-taind-datanode2   Up (healthy)
+hdfs-taind-datanode3   Up (healthy)
+
+La comprobación realizada con fsck produjo los siguientes datos:
+
+/ta-ind-01/archivo_estudiante.txt 241 bytes
+replication=3
+1 block(s): OK
+Live_repl=3
+Status: HEALTHY
+Number of data-nodes: 3
+Missing blocks: 0
+Missing replicas: 0
+
+Interpretación:
+
+El archivo se almacenó en un bloque y HDFS guardó tres copias. Cada réplica quedó ubicada en un DataNode diferente. Antes de provocar el fallo, el sistema no tenía bloques perdidos ni réplicas faltantes.
+
+4. PÉRDIDA DE RESPUESTA DEL DATANODE
+
+Comando utilizado:
+
+docker pause hdfs-taind-datanode1
+
+Estado observado:
+
+hdfs-taind-datanode1   Up (Paused)
+hdfs-taind-datanode2   Up (healthy)
+hdfs-taind-datanode3   Up (healthy)
+hdfs-taind-namenode    Up (healthy)
+
+Mientras el primer DataNode permanecía pausado se ejecutó la lectura con un tiempo de espera de tres segundos:
+
+docker exec -e HADOOP_OPTS=-Ddfs.client.socket-timeout=3000 hdfs-taind-namenode hdfs dfs -cat /ta-ind-01/archivo_estudiante.txt
+
+Contenido recuperado:
+
+TA-IND-01 - Experimento de tolerancia a fallos en Apache Hadoop HDFS
+Sistema principal: Apache Hadoop HDFS
+Sistema de comparación: Ceph
+Prueba: almacenamiento con factor de replicación 3 y pérdida controlada de respuesta de un DataNode.
+
+Interpretación:
+
+La lectura terminó correctamente aunque datanode1 no respondía. El cliente obtuvo el bloque desde una de las otras dos réplicas disponibles. Esto comprobó que la replicación permitió continuar la lectura sin recuperar primero el nodo pausado.
+
+5. RECUPERACIÓN
+
+Comando utilizado:
+
+docker unpause hdfs-taind-datanode1
+
+Después de reactivar el nodo, fsck mostró:
+
+Tamaño: 241 bytes
+Factor de replicación: 3
+Réplicas vivas: 3
+Estado: HEALTHY
+Bloques perdidos: 0
+Réplicas faltantes: 0
+
+6. CONCLUSIÓN DEL EXPERIMENTO
+
+La prueba confirmó que HDFS mantuvo disponible el archivo cuando un DataNode dejó de responder. El factor de replicación 3 permitió realizar la lectura desde otra copia. Después de recuperar el nodo, el sistema volvió a reportar tres réplicas vivas y ningún bloque perdido.
