@@ -1,7 +1,7 @@
 services:
   namenode:
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
-    container_name: hdfs-steven-namenode
+    container_name: hdfs-taind-namenode
     hostname: namenode
     environment:
       - CLUSTER_NAME=ta-ind-01-hdfs
@@ -18,7 +18,7 @@ services:
 
   datanode1:
     image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
-    container_name: hdfs-steven-datanode1
+    container_name: hdfs-taind-datanode1
     hostname: datanode1
     environment:
       SERVICE_PRECONDITION: "namenode:9870"
@@ -31,7 +31,7 @@ services:
 
   datanode2:
     image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
-    container_name: hdfs-steven-datanode2
+    container_name: hdfs-taind-datanode2
     hostname: datanode2
     environment:
       SERVICE_PRECONDITION: "namenode:9870"
@@ -44,7 +44,7 @@ services:
 
   datanode3:
     image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
-    container_name: hdfs-steven-datanode3
+    container_name: hdfs-taind-datanode3
     hostname: datanode3
     environment:
       SERVICE_PRECONDITION: "namenode:9870"

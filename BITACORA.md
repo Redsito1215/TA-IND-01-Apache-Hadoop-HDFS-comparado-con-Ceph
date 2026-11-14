@@ -1,8 +1,5 @@
 # Bitácora de trabajo
 
-**Estudiante:** Steven Fernando Pozo Castillo  
-**Curso:** 7.º semestre, paralelo B
-
 ## 14 de noviembre de 2026
 
 - **Actividad:** elección de Apache Hadoop HDFS como sistema principal y Ceph como sistema de comparación. Creación de la estructura inicial del repositorio.

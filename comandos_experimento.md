@@ -22,7 +22,7 @@ docker compose ps
 ## 3. Verificar los DataNodes activos
 
 ```powershell
-docker exec hdfs-steven-namenode hdfs dfsadmin -report
+docker exec hdfs-taind-namenode hdfs dfsadmin -report
 ```
 
 El reporte debe mostrar tres DataNodes activos antes de continuar.
@@ -30,30 +30,30 @@ El reporte debe mostrar tres DataNodes activos antes de continuar.
 ## 4. Crear el directorio y subir el archivo
 
 ```powershell
-docker exec hdfs-steven-namenode hdfs dfs -mkdir -p /ta-ind-01
-docker exec hdfs-steven-namenode hdfs dfs -put -f /evidencias/archivo_estudiante.txt /ta-ind-01/
-docker exec hdfs-steven-namenode hdfs dfs -ls /ta-ind-01
+docker exec hdfs-taind-namenode hdfs dfs -mkdir -p /ta-ind-01
+docker exec hdfs-taind-namenode hdfs dfs -put -f /evidencias/archivo_estudiante.txt /ta-ind-01/
+docker exec hdfs-taind-namenode hdfs dfs -ls /ta-ind-01
 ```
 
 ## 5. Comprobar el factor de replicación
 
 ```powershell
-docker exec hdfs-steven-namenode hdfs fsck /ta-ind-01/archivo_estudiante.txt -files -blocks -locations
+docker exec hdfs-taind-namenode hdfs fsck /ta-ind-01/archivo_estudiante.txt -files -blocks -locations
 ```
 
 ## 6. Simular un DataNode sin respuesta
 
 ```powershell
-docker pause hdfs-steven-datanode1
-docker ps --filter "name=hdfs-steven" --format "table {{.Names}}\t{{.Status}}"
-docker exec hdfs-steven-namenode hdfs dfs -cat /ta-ind-01/archivo_estudiante.txt
+docker pause hdfs-taind-datanode1
+docker ps --filter "name=hdfs-taind" --format "table {{.Names}}\t{{.Status}}"
+docker exec hdfs-taind-namenode hdfs dfs -cat /ta-ind-01/archivo_estudiante.txt
 ```
 
 ## 7. Recuperar el DataNode
 
 ```powershell
-docker unpause hdfs-steven-datanode1
-docker exec hdfs-steven-namenode hdfs fsck /ta-ind-01/archivo_estudiante.txt -files -blocks -locations
+docker unpause hdfs-taind-datanode1
+docker exec hdfs-taind-namenode hdfs fsck /ta-ind-01/archivo_estudiante.txt -files -blocks -locations
 ```
 
 ## Evidencias que deben obtenerse
