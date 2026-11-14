@@ -1,0 +1,67 @@
+services:
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: hdfs-steven-namenode
+    hostname: namenode
+    environment:
+      - CLUSTER_NAME=ta-ind-01-hdfs
+    env_file:
+      - ./hadoop.env
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+    volumes:
+      - namenode_data:/hadoop/dfs/name
+      - ./evidencias:/evidencias
+    networks:
+      - hdfs-network
+
+  datanode1:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: hdfs-steven-datanode1
+    hostname: datanode1
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+    env_file:
+      - ./hadoop.env
+    volumes:
+      - datanode1_data:/hadoop/dfs/data
+    networks:
+      - hdfs-network
+
+  datanode2:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: hdfs-steven-datanode2
+    hostname: datanode2
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+    env_file:
+      - ./hadoop.env
+    volumes:
+      - datanode2_data:/hadoop/dfs/data
+    networks:
+      - hdfs-network
+
+  datanode3:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: hdfs-steven-datanode3
+    hostname: datanode3
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+    env_file:
+      - ./hadoop.env
+    volumes:
+      - datanode3_data:/hadoop/dfs/data
+    networks:
+      - hdfs-network
+
+volumes:
+  namenode_data:
+  datanode1_data:
+  datanode2_data:
+  datanode3_data:
+
+networks:
+  hdfs-network:
+    name: ta-ind-01-hdfs-network
+
