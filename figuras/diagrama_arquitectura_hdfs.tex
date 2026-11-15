@@ -1,0 +1,34 @@
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    node distance=1.3cm and 1.6cm,
+    componente/.style={draw, rounded corners, align=center, minimum width=3.1cm,
+      minimum height=1.05cm, fill=blue!8},
+    datos/.style={draw, rounded corners, align=center, minimum width=3.1cm,
+      minimum height=1.05cm, fill=green!10},
+    enlace/.style={-Latex, thick},
+    doble/.style={<->, >=Latex, thick}
+  ]
+    \node[componente] (cliente) {Cliente HDFS\\\small rutas y comandos};
+    \node[componente, right=of cliente] (namenode) {NameNode\\\small metadatos y ubicación};
+
+    \node[datos, below=1.8cm of namenode, xshift=-4.0cm] (dn1) {DataNode 1\\\small réplica del bloque};
+    \node[datos, below=1.8cm of namenode] (dn2) {DataNode 2\\\small réplica del bloque};
+    \node[datos, below=1.8cm of namenode, xshift=4.0cm] (dn3) {DataNode 3\\\small réplica del bloque};
+
+    \draw[doble] (cliente) -- node[above, align=center]{\small RPC\\\small consulta de metadatos} (namenode);
+    \draw[enlace] (namenode) -- node[left, sloped]{\small ubicación} (dn1);
+    \draw[enlace] (namenode) -- node[right]{\small control} (dn2);
+    \draw[enlace] (namenode) -- node[right, sloped]{\small ubicación} (dn3);
+
+    \draw[doble, dashed] (cliente.south) -- ++(0,-1.0) -| node[pos=0.72, below]{\small lectura/escritura TCP} (dn1.west);
+    \draw[enlace, orange!80!black] (dn1) -- node[below]{\small réplica 2} (dn2);
+    \draw[enlace, orange!80!black] (dn2) -- node[below]{\small réplica 3} (dn3);
+
+    \node[below=0.7cm of dn2, align=center, text width=11cm] (nota)
+      {\small Los DataNodes envían \textit{heartbeats} y reportes de bloques al NameNode.\\
+       El contenido circula directamente entre cliente y DataNodes; el NameNode no transporta los bloques.};
+  \end{tikzpicture}
+  \caption{Arquitectura simplificada del clúster HDFS utilizado en el experimento.}
+  \label{fig:arquitectura-hdfs}
+\end{figure}

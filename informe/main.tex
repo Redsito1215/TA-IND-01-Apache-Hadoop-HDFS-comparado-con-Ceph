@@ -10,6 +10,8 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage[table]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,babel}
 \usepackage{hyperref}
 \usepackage{xurl}
 \usepackage{csquotes}
@@ -76,6 +78,8 @@ Los DataNodes envían \textit{heartbeats} y reportes de bloques al NameNode. Los
 
 El clúster del experimento reproduce esta estructura con cuatro contenedores: un NameNode y tres DataNodes conectados a una red privada de Docker. El archivo de prueba se almacena con factor de replicación tres, por lo que cada DataNode conserva una copia del único bloque generado.
 
+\input{../figuras/diagrama_arquitectura_hdfs.tex}
+
 \section{Análisis con los conceptos de la Unidad 1}
 
 \subsection{Transparencias de distribución}
@@ -128,6 +132,73 @@ Luego se pausó \texttt{hdfs-taind-datanode1}. La pausa mantuvo el contenedor co
 \end{table}
 
 La prueba valida la tolerancia de lectura frente a un nodo sin respuesta, pero tiene límites. Todos los contenedores se ejecutaron en el mismo equipo, por lo que no representan fallos físicos independientes ni una partición real entre centros de datos. Tampoco se midió la reconstrucción de archivos grandes. El resultado demuestra el mecanismo básico de selección de réplicas, no el rendimiento de un clúster de producción.
+
+Las figuras siguientes registran la ejecución real. Primero se comprobó que los cuatro contenedores estaban activos y que el NameNode reconocía tres DataNodes. Después, la salida de \texttt{fsck} confirmó las tres réplicas. Por último, Docker Desktop mostró el primer DataNode pausado mientras los otros dos y el NameNode continuaban activos.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\linewidth]{../figuras/01_contenedores_activos.png}
+  \caption{NameNode y tres DataNodes activos en Docker Desktop.}
+  \label{fig:contenedores-activos}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\linewidth]{../figuras/02_estado_namenode.png}
+  \caption{Resumen del NameNode con tres nodos vivos y ningún nodo caído.}
+  \label{fig:estado-namenode}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\linewidth]{../figuras/03_tres_datanodes.png}
+  \caption{Los tres DataNodes en operación y con una copia del bloque.}
+  \label{fig:tres-datanodes}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\linewidth]{../figuras/04_replicacion_fsck.png}
+  \caption{Comprobación del archivo con factor de replicación tres y estado saludable.}
+  \label{fig:replicacion-fsck}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\linewidth]{../figuras/05_datanode_pausado.png}
+  \caption{DataNode 1 pausado mientras los demás componentes permanecen activos.}
+  \label{fig:datanode-pausado}
+\end{figure}
+
+Las capturas de terminal complementan la interfaz gráfica y permiten comprobar la autoría de la ejecución mediante el usuario, el nombre del equipo y la fecha del sistema. También conservan los comandos utilizados y la salida obtenida sin modificarla.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\linewidth]{../figuras/06_terminal_contenedores.png}
+  \caption{Datos de la sesión y cuatro contenedores activos en la terminal.}
+  \label{fig:terminal-contenedores}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\linewidth]{../figuras/07_terminal_replicacion.png}
+  \caption{Salida de \texttt{fsck}: tres réplicas vivas y sistema de archivos saludable.}
+  \label{fig:terminal-replicacion}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\linewidth]{../figuras/08_terminal_nodo_pausado.png}
+  \caption{Identificación de la sesión y estado pausado del primer DataNode.}
+  \label{fig:terminal-nodo-pausado}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\linewidth]{../figuras/09_terminal_lectura_fallo.png}
+  \caption{Fallo de la primera réplica y lectura completada desde otro DataNode.}
+  \label{fig:terminal-lectura-fallo}
+\end{figure}
 
 \section{Ejemplos del entorno personal}
 
