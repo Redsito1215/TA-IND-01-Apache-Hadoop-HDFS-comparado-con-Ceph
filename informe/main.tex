@@ -102,6 +102,90 @@ La principal defensa de HDFS frente a fallos es almacenar varias copias de cada 
 
 La tolerancia no es gratuita. Aumentar el número de copias eleva el uso de disco y el tráfico durante las escrituras. Las investigaciones recientes buscan ajustar la cantidad de réplicas según la frecuencia de acceso y la importancia del archivo, en lugar de aplicar el mismo valor a todos los datos \cite{tlich2025replication}. En términos generales, la tolerancia a fallos requiere equilibrar disponibilidad, rendimiento y consumo de recursos \cite{saadoon2022fault}.
 
+\section{Experimentación propia}
+
+La prueba se realizó en Docker con un NameNode y tres DataNodes conectados a la red privada \texttt{ta-ind-01-hdfs-network}. Se creó el archivo \texttt{archivo\_estudiante.txt}, de 241 bytes, y se almacenó en la ruta \texttt{/ta-ind-01/}. La configuración estableció un factor de replicación tres.
+
+Antes de provocar el fallo se ejecutó \texttt{hdfs fsck} para comprobar la ubicación del bloque. La salida indicó un bloque en estado \texttt{OK}, tres réplicas vivas, cero bloques perdidos y estado general \texttt{HEALTHY}. Esto confirmó que cada DataNode conservaba una copia del archivo.
+
+Luego se pausó \texttt{hdfs-taind-datanode1}. La pausa mantuvo el contenedor conectado a la red, pero impidió que respondiera. Para evitar que el cliente permaneciera esperando indefinidamente se configuró un tiempo de espera de tres segundos. La lectura con \texttt{hdfs dfs -cat} terminó correctamente y mostró el contenido completo del archivo. Finalmente se reactivó el nodo y una segunda ejecución de \texttt{fsck} volvió a mostrar tres réplicas vivas y ningún bloque perdido.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Resultados observados durante el experimento}
+  \label{tab:resultados}
+  \renewcommand{\arraystretch}{1.25}
+  \begin{tabular}{p{3.2cm}p{3.1cm}p{6.5cm}}
+    \toprule
+    \textbf{Fase} & \textbf{Resultado} & \textbf{Interpretación} \\
+    \midrule
+    Estado inicial & 3 réplicas, \texttt{HEALTHY} & El bloque estaba disponible en los tres DataNodes. \\
+    Nodo pausado & \texttt{datanode1} sin respuesta & El clúster conservó dos copias accesibles. \\
+    Lectura degradada & Lectura correcta & El cliente obtuvo el bloque desde otra réplica. \\
+    Recuperación & 3 réplicas, \texttt{HEALTHY} & El nodo volvió a participar sin perder el archivo. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+La prueba valida la tolerancia de lectura frente a un nodo sin respuesta, pero tiene límites. Todos los contenedores se ejecutaron en el mismo equipo, por lo que no representan fallos físicos independientes ni una partición real entre centros de datos. Tampoco se midió la reconstrucción de archivos grandes. El resultado demuestra el mecanismo básico de selección de réplicas, no el rendimiento de un clúster de producción.
+
+\section{Ejemplos del entorno personal}
+
+\subsection{SGA de la UTEQ}
+
+He observado que el SGA puede volverse lento o presentar dificultades de acceso cuando se acerca una fecha de entrega. Como usuario no puedo conocer su arquitectura interna, pero el comportamiento permite relacionar la experiencia con la concurrencia y la disponibilidad. Muchas solicitudes llegan en un intervalo corto y aumentan el tiempo de respuesta. Si un servicio central se satura, la distribución de componentes no es transparente para el estudiante porque la demora se vuelve visible. Este caso muestra que un sistema distribuido no se evalúa solo por almacenar copias; también necesita repartir carga y conservar capacidad durante los picos.
+
+\subsection{WhatsApp durante una pérdida de conexión}
+
+En WhatsApp he visto mensajes que quedan pendientes cuando falla la conexión y se envían o sincronizan después. Esta experiencia se relaciona con comunicación asíncrona y tolerancia a desconexiones temporales. La aplicación conserva el mensaje localmente y reintenta la entrega cuando vuelve a existir conectividad. Para el usuario existe una transparencia parcial: no debe escribir nuevamente el contenido, pero los indicadores de estado muestran que todavía no llegó al servidor o al destinatario. A diferencia de HDFS, el objetivo principal no es recuperar un bloque replicado, sino mantener la entrega y el orden de mensajes mientras cambia la conectividad.
+
+\section{Análisis comparativo con Ceph}
+
+Ceph resuelve el almacenamiento distribuido con una arquitectura diferente. Sus clientes utilizan el mapa del clúster y el algoritmo CRUSH para calcular la ubicación de los objetos. De esta manera, la ruta de los datos no depende de consultar un NameNode para cada bloque. Los OSD almacenan los objetos y participan en replicación, recuperación y balanceo. Trabajos recientes muestran que Ceph puede adaptarse a distintos dispositivos y cargas, aunque su configuración y sus rutas internas de escritura introducen costos de rendimiento \cite{ha2025zceph,vondra2026benchmark}.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Comparación entre HDFS y Ceph}
+  \label{tab:comparacion}
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabular}{p{3.1cm}p{5.2cm}p{5.2cm}}
+    \toprule
+    \textbf{Criterio} & \textbf{HDFS} & \textbf{Ceph} \\
+    \midrule
+    Unidad de almacenamiento & Divide archivos en bloques grandes. & Distribuye objetos mediante RADOS. \\
+    Metadatos y ubicación & El NameNode conserva el espacio de nombres y las ubicaciones. & CRUSH calcula la ubicación con el mapa del clúster; MON mantiene consenso sobre ese mapa. \\
+    Comunicación & RPC para metadatos y TCP directo con DataNodes. & El cliente obtiene el mapa y se comunica directamente con los OSD. \\
+    Redundancia & Replicación configurable y Erasure Coding. & Replicación o Erasure Coding por grupos de colocación. \\
+    Recuperación & El NameNode detecta pérdidas y ordena nuevas réplicas. & Los OSD ejecutan recuperación y \textit{backfill} según el estado del grupo de colocación. \\
+    CAP/PACELC & Favorece coherencia del espacio de nombres; puede detener operaciones si no hay NameNode activo. & Conserva consistencia por objeto y puede bloquear grupos afectados cuando falta quórum. \\
+    Uso más adecuado & Archivos grandes y procesamiento secuencial por lotes. & Almacenamiento de objetos, bloques y archivos para cargas más variadas. \\
+    Complejidad & El modelo NameNode--DataNode es más sencillo de estudiar y operar a pequeña escala. & Ofrece mayor flexibilidad, pero requiere administrar MON, OSD, mapas y grupos de colocación. \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Los dos sistemas privilegian la integridad de los datos, pero distribuyen responsabilidades de forma distinta. HDFS facilita el procesamiento cercano a los datos y una lectura secuencial eficiente. Ceph evita concentrar la decisión de ubicación de cada objeto en un único NameNode y soporta más interfaces de almacenamiento. La elección depende del tipo de carga y de la experiencia operativa disponible.
+
+\section{Postura crítica}
+
+La principal fortaleza de HDFS es que su diseño resulta comprensible y predecible. Separar metadatos y bloques simplifica el procesamiento de archivos grandes, mientras la replicación permite tolerar fallos de DataNodes. El experimento mostró que una lectura puede continuar con una réplica sin respuesta.
+
+Su mayor limitación es que la protección consume espacio. Con factor tres, cada bloque ocupa aproximadamente tres veces su tamaño antes de considerar otros metadatos. Además, el NameNode sigue siendo un componente crítico aunque las configuraciones de alta disponibilidad reduzcan el riesgo. La literatura también identifica problemas cuando existen muchos archivos pequeños, porque cada archivo y bloque aumenta la cantidad de metadatos administrados \cite{dhulavvagol2023federation}.
+
+No elegiría HDFS para una aplicación que necesite modificaciones aleatorias frecuentes, millones de archivos diminutos o respuestas interactivas de muy baja latencia. Tampoco lo usaría como reemplazo directo de una base de datos. En esos casos Ceph, un almacén de objetos o una base distribuida pueden ajustarse mejor. HDFS es más convincente cuando los archivos son grandes, se escriben pocas veces y se leen de manera secuencial para análisis por lotes.
+
+\section{Conclusiones}
+
+La arquitectura de HDFS logra que la ubicación física de los bloques sea transparente para el cliente, pero mantiene al NameNode como coordinador esencial del espacio de nombres. Esta decisión simplifica el acceso y la recuperación, a cambio de concentrar los metadatos y exigir mecanismos adicionales de alta disponibilidad.
+
+El experimento confirmó que un archivo con factor de replicación tres continuó disponible mientras uno de los DataNodes estaba pausado. La conclusión se limita a la lectura de un bloque pequeño dentro de un solo equipo; no representa el rendimiento ni los fallos independientes de un clúster real.
+
+La comparación mostró que Ceph distribuye de otra manera la ubicación y recuperación de datos. HDFS resulta apropiado para procesamiento secuencial de archivos grandes, mientras Ceph ofrece interfaces y cargas más variadas con mayor complejidad operativa. Por ello, la elección no debe basarse únicamente en cuál sistema replica más datos, sino en el patrón de acceso, la latencia esperada y la capacidad de administrar la infraestructura.
+
+\section{Declaración de uso de inteligencia artificial}
+
+Se utilizó Codex de OpenAI, basado en GPT-5, como apoyo para organizar la estructura del informe, revisar sintaxis de LaTeX, comprobar comandos de Docker y consultar metadatos bibliográficos. Los resultados técnicos se verificaron ejecutando el clúster local, comparando las salidas de HDFS y revisando los DOI en Crossref y ScienceDirect. El contenido fue revisado antes de incorporarlo y las experiencias personales corresponden a observaciones del estudiante.
+
 \printbibliography[heading=bibintoc,title={Referencias}]
 
 \end{document}
