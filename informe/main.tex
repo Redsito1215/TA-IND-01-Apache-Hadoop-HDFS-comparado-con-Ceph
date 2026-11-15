@@ -29,6 +29,8 @@
 
 \begin{document}
 
+\pagenumbering{gobble}
+
 \begin{titlepage}
   \centering
   \vspace*{1.5cm}
@@ -55,6 +57,9 @@
   \vspace{0.2cm}
   {\small\url{https://github.com/Redsito1215/TA-IND-01-Apache-Hadoop-HDFS-comparado-con-Ceph}\par}
 \end{titlepage}
+
+\clearpage
+\pagenumbering{arabic}
 
 \begin{abstract}
 Este informe analiza Apache Hadoop Distributed File System (HDFS), un sistema de archivos distribuido utilizado para almacenar grandes volúmenes de información en varios equipos. El estudio se concentra en la función del NameNode, la distribución de bloques entre DataNodes y la replicación como mecanismo de tolerancia a fallos. Los conceptos de transparencia, comunicación, CAP y PACELC se aplican a la arquitectura real, evitando tratar a HDFS como si fuera una base de datos transaccional. Además, se realiza una prueba local con Docker formada por un NameNode y tres DataNodes. En ella se almacena un archivo con factor de replicación tres, se pausa uno de los nodos y se comprueba que la lectura continúa desde otra copia. Los resultados se contrastan con Ceph, que distribuye la ubicación de objetos mediante CRUSH y evita depender de un único servicio equivalente al NameNode para resolver cada acceso. Se concluye que HDFS ofrece una solución sencilla y resistente para archivos grandes y procesamiento por lotes, aunque la centralización de metadatos y el costo de mantener varias copias limitan su conveniencia en cargas con muchos archivos pequeños o acceso de baja latencia.
@@ -281,21 +286,21 @@ Las siguientes capturas conservan los fragmentos revisados y marcados durante la
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[height=0.78\textheight,keepaspectratio]{../figuras/anexo_b_01_replicacion_dinamica.png}
+  \includegraphics[width=\linewidth,height=0.68\textheight,keepaspectratio]{../figuras/anexo_b_01_replicacion_dinamica.png}
   \caption{Colocación dinámica de réplicas para datos compartidos, página 3613 \cite{tlich2025replication}.}
   \label{fig:lectura-replicacion}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[height=0.78\textheight,keepaspectratio]{../figuras/anexo_b_02_federacion_sharding.png}
+  \includegraphics[width=\linewidth,height=0.78\textheight,keepaspectratio]{../figuras/anexo_b_02_federacion_sharding.png}
   \caption{Partición de metadatos entre NameNodes y replicación, página 2832 \cite{dhulavvagol2023federation}.}
   \label{fig:lectura-federacion}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[height=0.78\textheight,keepaspectratio]{../figuras/anexo_b_03_costo_replicacion.png}
+  \includegraphics[width=\linewidth,height=0.78\textheight,keepaspectratio]{../figuras/anexo_b_03_costo_replicacion.png}
   \caption{Disponibilidad y costo de almacenamiento de tres réplicas, página 4 \cite{saadoon2022fault}.}
   \label{fig:lectura-costo}
 \end{figure}
