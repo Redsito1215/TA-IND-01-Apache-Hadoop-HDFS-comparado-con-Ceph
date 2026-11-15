@@ -38,5 +38,5 @@ El resultado se genera como `informe/main.pdf`.
 
 ## Video de sustentación
 
-El enlace público del video se incorporará aquí antes de la entrega.
+[Ver video de sustentación en YouTube](https://youtu.be/AH7A_xNJEg8)
 
