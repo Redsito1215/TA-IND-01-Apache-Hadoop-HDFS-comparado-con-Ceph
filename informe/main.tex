@@ -1,0 +1,107 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{newtxtext}
+\usepackage{newtxmath}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{hyperref}
+\usepackage{xurl}
+\usepackage{csquotes}
+\usepackage[backend=biber,style=ieee,sorting=none]{biblatex}
+
+\geometry{top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm}
+\addbibresource{referencias.bib}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=blue,
+  pdftitle={Análisis crítico de Apache Hadoop HDFS}
+}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{1.5cm}
+  {\Large\textbf{Universidad Técnica Estatal de Quevedo}\par}
+  \vspace{0.5cm}
+  {\large Facultad de Ciencias de la Ingeniería\par}
+  {\large Carrera de Ingeniería de Software\par}
+
+  \vspace{1.8cm}
+  {\large\textbf{Asignatura:} Sistemas Distribuidos\par}
+  \vspace{0.3cm}
+  {\large\textbf{Actividad:} TA-IND-01 --- Informe Académico Individual\par}
+
+  \vspace{1.8cm}
+  {\LARGE\textbf{Análisis crítico de Apache Hadoop HDFS y comparación con Ceph}\par}
+
+  \vspace{1.8cm}
+  {\large\textbf{Estudiante:} Steven Fernando Pozo Castillo\par}
+  {\large\textbf{Curso/Paralelo:} Séptimo semestre ``B''\par}
+  {\large\textbf{Fecha:} 14 de noviembre de 2026\par}
+
+  \vfill
+  {\large\textbf{Repositorio público:}\par}
+  \vspace{0.2cm}
+  {\small\url{https://github.com/Redsito1215/TA-IND-01-Apache-Hadoop-HDFS-comparado-con-Ceph}\par}
+\end{titlepage}
+
+\begin{abstract}
+Este informe analiza Apache Hadoop Distributed File System (HDFS), un sistema de archivos distribuido utilizado para almacenar grandes volúmenes de información en varios equipos. El estudio se concentra en la función del NameNode, la distribución de bloques entre DataNodes y la replicación como mecanismo de tolerancia a fallos. Los conceptos de transparencia, comunicación, CAP y PACELC se aplican a la arquitectura real, evitando tratar a HDFS como si fuera una base de datos transaccional. Además, se realiza una prueba local con Docker formada por un NameNode y tres DataNodes. En ella se almacena un archivo con factor de replicación tres, se pausa uno de los nodos y se comprueba que la lectura continúa desde otra copia. Los resultados se contrastan con Ceph, que distribuye la ubicación de objetos mediante CRUSH y evita depender de un único servicio equivalente al NameNode para resolver cada acceso. Se concluye que HDFS ofrece una solución sencilla y resistente para archivos grandes y procesamiento por lotes, aunque la centralización de metadatos y el costo de mantener varias copias limitan su conveniencia en cargas con muchos archivos pequeños o acceso de baja latencia.
+\end{abstract}
+
+\section{Introducción}
+
+Apache Hadoop HDFS resuelve el problema de almacenar archivos que superan la capacidad o la confiabilidad de un solo servidor. En lugar de guardar cada archivo completo en una máquina, lo divide en bloques y distribuye copias entre varios DataNodes. Este enfoque se utiliza principalmente en ambientes de Big Data, donde los datos se procesan de forma paralela y resulta más importante mantener un flujo alto de lectura que responder en pocos milisegundos.
+
+La elección de HDFS se debe a que su tolerancia a fallos puede observarse en un equipo personal. Un clúster pequeño permite identificar la relación entre el NameNode y los DataNodes, revisar la ubicación de un bloque y provocar la pérdida temporal de respuesta de una réplica. Además, su diseño presenta un contraste claro con Ceph. HDFS mantiene los metadatos del sistema de archivos en el NameNode, mientras Ceph calcula la ubicación de los objetos mediante el algoritmo CRUSH y una estructura de almacenamiento más descentralizada.
+
+La literatura reciente muestra que la replicación fija de HDFS mantiene la disponibilidad, pero también puede desperdiciar espacio cuando se aplica por igual a archivos con patrones de uso diferentes \cite{tlich2025replication}. Asimismo, la concentración de metadatos en el NameNode puede convertirse en un límite de escalabilidad, motivo por el cual se han estudiado técnicas como la federación y el particionamiento del espacio de nombres \cite{dhulavvagol2023federation}.
+
+\section{Arquitectura del sistema}
+
+La arquitectura básica de HDFS sigue un modelo maestro-trabajador. El NameNode administra el espacio de nombres, los permisos, la relación entre archivos y bloques, y la ubicación de las réplicas. Los DataNodes almacenan físicamente los bloques y atienden las operaciones de lectura y escritura solicitadas por los clientes.
+
+Cuando un cliente desea leer un archivo, primero consulta al NameNode para obtener las ubicaciones de sus bloques. Después se comunica directamente con los DataNodes, sin hacer pasar el contenido por el NameNode. En una escritura, el NameNode selecciona una cadena de DataNodes y el bloque circula por esa cadena hasta completar el número de réplicas configurado. Esta separación evita que el servidor de metadatos cargue con todo el tráfico de datos, aunque mantiene una dependencia importante respecto de su disponibilidad.
+
+Los DataNodes envían \textit{heartbeats} y reportes de bloques al NameNode. Los primeros indican que continúan activos; los segundos permiten conocer qué bloques conserva cada nodo. Si el NameNode deja de recibir señales de un DataNode, lo marca como no disponible y programa nuevas copias de los bloques que hayan quedado por debajo del factor de replicación. La replicación mejora la confiabilidad y el acceso, pero consume capacidad y tráfico de red \cite{swaroopa2023replication}.
+
+El clúster del experimento reproduce esta estructura con cuatro contenedores: un NameNode y tres DataNodes conectados a una red privada de Docker. El archivo de prueba se almacena con factor de replicación tres, por lo que cada DataNode conserva una copia del único bloque generado.
+
+\section{Análisis con los conceptos de la Unidad 1}
+
+\subsection{Transparencias de distribución}
+
+HDFS proporciona transparencia de acceso porque el usuario trabaja con rutas y comandos semejantes a los de un sistema de archivos, sin indicar manualmente en qué DataNode se encuentra cada bloque. También ofrece transparencia de ubicación y replicación: el cliente consulta una ruta lógica y el NameNode devuelve las réplicas disponibles. La ubicación física puede cambiar después de una recuperación o un balanceo sin modificar el nombre utilizado por la aplicación.
+
+La transparencia de fallos es parcial. Cuando una réplica no responde, el cliente puede leer desde otra copia. Sin embargo, una caída del NameNode activo, una demora en la detección del fallo o una partición que impida alcanzar una mayoría de servicios de coordinación puede hacerse visible como una pausa o un error. HDFS tampoco oculta por completo los problemas de concurrencia. Está optimizado para escribir una vez y leer muchas veces; no ofrece el mismo tipo de actualización concurrente y aleatoria que un sistema de archivos local de propósito general.
+
+\subsection{CAP y PACELC}
+
+HDFS no es una base de datos y su clasificación CAP debe aplicarse con cuidado. En la capa de metadatos, el sistema prioriza una visión coherente del espacio de nombres. Si el NameNode activo no puede operar o no existe un reemplazo disponible, las nuevas operaciones se detienen antes que permitir cambios contradictorios. Por esta razón, su comportamiento se aproxima a una preferencia por consistencia frente a disponibilidad durante una partición.
+
+En ausencia de particiones, HDFS acepta latencias mayores con el fin de conservar redundancia. Una escritura puede recorrer varios DataNodes antes de ser reconocida, mientras las lecturas intentan elegir una réplica cercana. Desde PACELC, esta decisión se aproxima a favorecer consistencia y durabilidad sobre una latencia mínima. No obstante, el resultado depende de la configuración del clúster, del factor de replicación y de si se utiliza alta disponibilidad para el NameNode.
+
+\subsection{Modelos de comunicación}
+
+El sistema combina varios mecanismos. La consulta de metadatos sigue un modelo cliente-servidor mediante RPC entre el cliente y el NameNode. La transferencia del contenido ocurre directamente entre el cliente y los DataNodes mediante conexiones TCP. Durante la escritura, los DataNodes forman una tubería para reenviar el bloque y confirmar su recepción.
+
+La comunicación de control es periódica y asíncrona. Los heartbeats y reportes de bloques permiten al NameNode actualizar su visión del clúster sin consultar continuamente cada servidor. Por tanto, HDFS no es completamente \textit{peer-to-peer}: conserva coordinación central para los metadatos y distribución directa para los datos.
+
+\subsection{Tolerancia a fallos}
+
+La principal defensa de HDFS frente a fallos es almacenar varias copias de cada bloque. Si un DataNode deja de responder, el NameNode puede seleccionar otra ubicación y ordenar una nueva réplica. Los clientes también pueden cambiar de réplica cuando una lectura falla. A esto se añaden sumas de verificación para detectar bloques dañados y configuraciones de alta disponibilidad con un NameNode activo y otro en espera.
+
+La tolerancia no es gratuita. Aumentar el número de copias eleva el uso de disco y el tráfico durante las escrituras. Las investigaciones recientes buscan ajustar la cantidad de réplicas según la frecuencia de acceso y la importancia del archivo, en lugar de aplicar el mismo valor a todos los datos \cite{tlich2025replication}. En términos generales, la tolerancia a fallos requiere equilibrar disponibilidad, rendimiento y consumo de recursos \cite{saadoon2022fault}.
+
+\printbibliography[heading=bibintoc,title={Referencias}]
+
+\end{document}
